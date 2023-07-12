@@ -1,0 +1,7 @@
+{
+	"skriptautocompletes_command": {
+		"prefix": "command",
+		"body": ["command /$1 [<text>]:", "\ttrigger:", "\t\t$2"],
+		"description": "Creates a basic skript command"
+	}
+}

@@ -1,0 +1,60 @@
+{
+	"name": "skript-autocompletions",
+	"displayName": "Skript Autocompletions",
+	"description": "Provides autocompletions for Minecraft Skript",
+	"version": "0.0.1",
+	"publisher": "Ezzenix",
+	"keywords": [
+		"skript",
+		"autocomplete",
+		"intellisense",
+		"minecraft"
+	],
+	"icon": "assets/Logo.png",
+	"engines": {
+		"vscode": "^1.78.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Ezzenix/AutoRequireRoblox"
+	},
+	"categories": [
+		"Programming Languages",
+		"Snippets",
+		"Language Packs"
+	],
+	"activationEvents": [
+		"onLanguage:skript"
+	],
+	"languages": [
+		{
+			"id": "skript",
+			"extensions": [
+				".sk"
+			]
+		}
+	],
+	"main": "out/extension.js",
+	"contributes": {},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src --ext ts",
+		"test": "node ./out/test/runTest.js"
+	},
+	"devDependencies": {
+		"@types/glob": "^8.1.0",
+		"@types/mocha": "^10.0.1",
+		"@types/node": "16.x",
+		"@types/vscode": "^1.78.0",
+		"@typescript-eslint/eslint-plugin": "^5.59.1",
+		"@typescript-eslint/parser": "^5.59.1",
+		"@vscode/test-electron": "^2.3.0",
+		"eslint": "^8.39.0",
+		"glob": "^8.1.0",
+		"mocha": "^10.2.0",
+		"typescript": "^5.0.4"
+	}
+}
