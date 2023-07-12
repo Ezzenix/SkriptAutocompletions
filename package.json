@@ -2,7 +2,7 @@
 	"name": "skript-autocompletions",
 	"displayName": "Skript Autocompletions",
 	"description": "Provides autocompletions for Minecraft Skript",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"publisher": "Ezzenix",
 	"keywords": [
 		"skript",
@@ -10,13 +10,13 @@
 		"intellisense",
 		"minecraft"
 	],
-	"icon": "assets/Logo.png",
+	"icon": "assets/Logo.jpg",
 	"engines": {
 		"vscode": "^1.78.0"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Ezzenix/AutoRequireRoblox"
+		"url": "https://github.com/Ezzenix/SkriptAutocompletions"
 	},
 	"categories": [
 		"Programming Languages",

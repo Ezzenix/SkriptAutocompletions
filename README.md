@@ -7,7 +7,7 @@ Skript Autocompletes is a Visual Studio Code Extension that makes writing Minecr
 Function autocompletions, goto definitions and useful snippets. More coming soon...
 
 ## Install
-* Download the extension [here](https://marketplace.visualstudio.com/items?itemName=Ezzenix.auto-require-roblox) or from the extensions tab directly.
+* Download the extension [here](https://marketplace.visualstudio.com/items?itemName=Ezzenix.skript-autocompletions) or from the extensions tab directly.
 
 ## Todo
 
