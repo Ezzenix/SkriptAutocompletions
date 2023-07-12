@@ -33,15 +33,15 @@ export class Session {
 	}
 
 	fileCreated(uri: Uri) {
-		console.log("fileCreated");
+		//console.log("fileCreated");
 		this.registryHandler.fileCreated(uri);
 	}
 	fileDeleted(uri: Uri) {
-		console.log("fileDeleted");
+		//console.log("fileDeleted");
 		this.registryHandler.fileDeleted(uri);
 	}
 	fileChanged(uri: Uri) {
-		console.log("fileChanged");
+		//console.log("fileChanged");
 		this.registryHandler.fileChanged(uri);
 	}
 

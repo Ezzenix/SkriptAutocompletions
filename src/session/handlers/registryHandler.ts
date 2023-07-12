@@ -16,6 +16,7 @@ export type Function = {
 	script: Script;
 	declarationRange: Range;
 	declarationLineText: string;
+	isPrivate: boolean;
 };
 
 export type Script = {
@@ -45,7 +46,7 @@ export class RegistryHandler {
 		this.documentListener = workspace.onDidChangeTextDocument((e) => {
 			const isInWorkspace = relative(e.document.uri.fsPath, session.workspacePath).startsWith("..");
 			if (!isInWorkspace) return;
-			this.updateRegistryFor(fixPath(e.document.uri.path));
+			this.updateRegistryFor(fixPath(e.document.uri.path), e.document.getText());
 		});
 	}
 
@@ -79,7 +80,7 @@ export class RegistryHandler {
 
 		const lines = source.split("\n");
 		for (const line of lines) {
-			const match = line.match(/^\s*function\s+(\w+)\s*\(\s*([\w\s:]+)\s*\)/g);
+			const match = line.match(/^\s*function\s+(\w+)\s*\(\s*([\w\s:,]+)\s*\)/g);
 			if (match) {
 				const lineCount = lines.indexOf(line);
 
@@ -111,6 +112,9 @@ export class RegistryHandler {
 					script: script,
 					declarationRange: range,
 					declarationLineText: line,
+					isPrivate: documentation.some((comment) => {
+						return comment.trim() === "@private";
+					}),
 				});
 			}
 		}
@@ -120,6 +124,8 @@ export class RegistryHandler {
 
 	// UPDATE
 	private updateRegistryFor(path: string, source?: string) {
+		path = fixPath(path);
+
 		if (!source) {
 			// if no source was provided then read from the filesystem
 			source = readFile(path);
@@ -155,6 +161,15 @@ export class RegistryHandler {
 		}
 	}
 
+	getScript(path: string) {
+		path = fixPath(path);
+		for (const script of this.registry) {
+			if (script.path === path) {
+				return script;
+			}
+		}
+	}
+
 	private getScriptPaths() {
 		const scripts = [];
 
@@ -176,6 +191,8 @@ export class RegistryHandler {
 	}
 
 	private removeFromRegistryByPath(path: string) {
+		path = fixPath(path);
+
 		const script = this.registry.find((v) => v.path === path);
 		if (!script) return;
 		const index = this.registry.indexOf(script);
