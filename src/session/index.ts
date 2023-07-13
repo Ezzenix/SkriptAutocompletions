@@ -1,25 +1,28 @@
-import { ExtensionContext, FileSystemWatcher, RelativePattern, Uri, workspace } from "vscode";
-import { RegistryHandler } from "./handlers/registryHandler";
+import { ExtensionContext, FileSystemWatcher, RelativePattern, Uri, WorkspaceConfiguration, workspace } from "vscode";
+import { DiagnosticHandler } from "./handlers/diagnosticHandler";
 import { ProviderHandler } from "./handlers/providerHandler";
+import { RegistryHandler } from "./handlers/registryHandler";
+import { colorPicker } from "./handlers/colorPicker";
 
 export class Session {
 	context: ExtensionContext;
 	workspacePath: string;
 	watcher: FileSystemWatcher;
+	configuration: WorkspaceConfiguration;
 
 	registryHandler: RegistryHandler;
+	diagnosticHandler: DiagnosticHandler;
 	providerHandler: ProviderHandler;
 
 	constructor(context: ExtensionContext, workspacePath: string) {
 		this.context = context;
 		this.workspacePath = workspacePath;
+		this.configuration = workspace.getConfiguration("skriptAutocompletions");
 
-		// Initialize registry
+		// Initialize handlers
+		this.diagnosticHandler = new DiagnosticHandler(this);
 		this.registryHandler = new RegistryHandler(this);
-
-		// Initialize providers
-		const documentSelector = { language: "skript", pattern: new RelativePattern(workspacePath, "**/*.sk") };
-		this.providerHandler = new ProviderHandler(this, documentSelector);
+		this.providerHandler = new ProviderHandler(this);
 
 		// Create file watcher
 		const pattern = new RelativePattern(workspacePath, "*.sk");
@@ -30,6 +33,12 @@ export class Session {
 		this.watcher.onDidChange(fileChanged);
 		this.watcher.onDidCreate(fileCreated);
 		this.watcher.onDidDelete(fileDeleted);
+
+		// Start
+		this.diagnosticHandler.start();
+		this.registryHandler.start();
+
+		colorPicker(this);
 	}
 
 	fileCreated(uri: Uri) {
@@ -45,8 +54,7 @@ export class Session {
 		this.registryHandler.fileChanged(uri);
 	}
 
-	dispose() {
+	destroy() {
 		this.watcher.dispose();
-		this.providerHandler.dispose();
 	}
 }

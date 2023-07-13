@@ -1,12 +1,19 @@
 import { readdirSync } from "fs";
+import { basename, join, relative } from "path";
+import { Position, Range, Uri, workspace } from "vscode";
 import { Session } from "..";
 import { fileStat, fixPath, readFile } from "../../utilities/fsWrapper";
-import { basename, join, relative } from "path";
-import { Disposable, Position, Range, Uri, workspace } from "vscode";
+import { isPathWithin, isPositionInString } from "../../utilities/functions";
 
 export type FunctionParam = {
 	name: string;
 	type: string;
+};
+
+export type FunctionUse = {
+	name: string;
+	params: string;
+	range: Range;
 };
 
 export type Function = {
@@ -25,29 +32,37 @@ export type Script = {
 	relativePath: string;
 	meta: {
 		functions: Function[];
+		functionUses: FunctionUse[];
 	};
 };
 
 export class RegistryHandler {
 	session: Session;
 	registry: Script[];
-	documentListener: Disposable;
 
 	constructor(session: Session) {
 		this.session = session;
 
 		// initialize registry
 		this.registry = [];
+	}
+
+	start() {
 		this.getScriptPaths().forEach((path) => {
 			this.updateRegistryFor(path);
 		});
 
 		// listen for document changes to update registry for
-		this.documentListener = workspace.onDidChangeTextDocument((e) => {
-			const isInWorkspace = relative(e.document.uri.fsPath, session.workspacePath).startsWith("..");
-			if (!isInWorkspace) return;
-			this.updateRegistryFor(fixPath(e.document.uri.path), e.document.getText());
-		});
+		this.session.context.subscriptions.push(
+			workspace.onDidChangeTextDocument((e) => {
+				const path = fixPath(e.document.uri.path);
+				if (isPathWithin(path, this.session.workspacePath)) {
+					if (e.contentChanges.length > 0) {
+						this.updateRegistryFor(path, e.document.getText());
+					}
+				}
+			})
+		);
 	}
 
 	// PARSING
@@ -79,11 +94,11 @@ export class RegistryHandler {
 		const functions: Function[] = [];
 
 		const lines = source.split("\n");
+		let lineCount = -1;
 		for (const line of lines) {
-			const match = line.match(/^\s*function\s+(\w+)\s*\(\s*([\w\s:,]+)\s*\)/g);
+			lineCount += 1;
+			const match = line.match(/^\s*function\s+(\w+)\s*(?:\(\s*([\w\s:,]+)\s*\))?/g);
 			if (match) {
-				const lineCount = lines.indexOf(line);
-
 				const t = match[0].split(" ");
 				t.splice(0, 1);
 				const split = t.join(" ").split("(");
@@ -91,15 +106,17 @@ export class RegistryHandler {
 				const functionName = split[0];
 				const paramsText = split[1];
 				const params: FunctionParam[] = paramsText
-					.substring(0, paramsText.length - 1) // remove last )
-					.split(", ")
-					.map((param) => {
-						const paramSplit = param.split(": ");
-						return {
-							name: paramSplit[0],
-							type: paramSplit[1],
-						};
-					});
+					? paramsText
+							.substring(0, paramsText.length - 1) // remove last )
+							.split(", ")
+							.map((param) => {
+								const paramSplit = param.split(": ");
+								return {
+									name: paramSplit[0],
+									type: paramSplit[1],
+								};
+							})
+					: [];
 
 				const documentation = this.getCommentsAbove(lines, lineCount);
 
@@ -122,6 +139,40 @@ export class RegistryHandler {
 		return functions;
 	}
 
+	/**
+	 * Updates the uses information for every function in the registry
+	 */
+	private parseFunctionUses(script: Script, source: string): FunctionUse[] {
+		const uses = [];
+
+		const lines = source.split("\n");
+		const regex = /(?<!\bfunction\s+)\b(\w+)\(([^)]*)\)/g;
+		let match;
+
+		lines.forEach((line, lineNumber) => {
+			while ((match = regex.exec(line))) {
+				const functionName = match[1];
+				const parametersString = match[2];
+				//const parameters = parametersString.split(",").map((param) => param.trim());
+
+				// Calculate the range of the function usage
+				const usageStartPosition = match.index + match[0].indexOf(functionName);
+				const usageEndPosition = regex.lastIndex;
+				const range = new Range(new Position(lineNumber, usageStartPosition), new Position(lineNumber, usageEndPosition));
+
+				if (isPositionInString(line, range.start.character)) continue;
+
+				uses.push({
+					name: functionName,
+					params: parametersString,
+					range: range,
+				});
+			}
+		});
+
+		return uses;
+	}
+
 	// UPDATE
 	private updateRegistryFor(path: string, source?: string) {
 		path = fixPath(path);
@@ -140,14 +191,21 @@ export class RegistryHandler {
 			relativePath: path.slice(this.session.workspacePath.length + 1).replace(/\\/g, "/"),
 			meta: {
 				functions: [],
+				functionUses: [],
 			},
 		};
 
 		script.meta.functions = this.parseFunctions(script, source);
+		script.meta.functionUses = this.parseFunctionUses(script, source);
 
 		// add to registry
 		this.removeFromRegistryByPath(path);
 		this.registry.push(script);
+
+		// diagnostics
+		this.session.diagnosticHandler.updateDiagnostics(path);
+
+		//console.log(this.registry);
 	}
 
 	// -------------

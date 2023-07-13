@@ -2,7 +2,7 @@
 	"name": "skript-autocompletions",
 	"displayName": "Skript Autocompletions",
 	"description": "Provides autocompletions for Minecraft Skript",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"publisher": "Ezzenix",
 	"keywords": [
 		"skript",
@@ -10,7 +10,7 @@
 		"intellisense",
 		"minecraft"
 	],
-	"icon": "assets/Logo.jpg",
+	"icon": "assets/logo.jpg",
 	"engines": {
 		"vscode": "^1.78.0"
 	},
@@ -35,7 +35,18 @@
 		}
 	],
 	"main": "out/extension.js",
-	"contributes": {},
+	"contributes": {
+		"configuration": {
+			"title": "Skript Autocompletions",
+			"properties": {
+				"skriptAutocompletions.inlayHints": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show inlay hints on function arguments."
+				}
+			}
+		}
+	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./",

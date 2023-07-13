@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { normalize } from "path";
+import { normalize, resolve } from "path";
 
 const DEBUG_MODE = true;
 
@@ -18,6 +18,8 @@ export function fixPath(path: string) {
 	if (path.endsWith("\\")) {
 		path = path.substring(0, path.length - 1);
 	}
+
+	path = path.charAt(0).toLowerCase() + path.slice(1); // make first character lowercase, for some reason its not always that
 
 	return path;
 }

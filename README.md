@@ -1,14 +1,29 @@
-## About
+# Skript Autocompletions
 
-Skript Autocompletes is a Visual Studio Code Extension that makes writing Minecraft Skript easier.
+Skript Autocompletes is a Visual Studio Code Extension that makes writing Minecraft Skript easier. The extension is not fully done yet so there may be bugs, if so please report them to me.
 
 ## Features
 
-Function autocompletions, goto definitions and useful snippets. More coming soon...
+* Function autocompletions
+* Function argument help
+* Function argument inlay hints (off by default)
+* Function goto definition
+* Works across files
+* Private functions for autocompletion
+* Built-in colorpicker
+* Basic diagnostics
+* Snippets
+* Supports multi-root workspaces
+* More coming soon...
 
 ## Install
 * Download the extension [here](https://marketplace.visualstudio.com/items?itemName=Ezzenix.skript-autocompletions) or from the extensions tab directly.
 
-## Todo
+## Preview
 
-* Function arguments help
+<p align="center">
+	<img src="assets/preview/autoCompletion.gif"></img>
+	<img src="assets/preview/diagnostics.png"></img>
+	<img src="assets/preview/colorPicker.png"></img>
+	<img src="assets/preview/inlayHints.png"></img>
+</p>

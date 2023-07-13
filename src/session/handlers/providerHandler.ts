@@ -1,19 +1,16 @@
-import { Session } from "..";
 import {
 	CancellationToken,
 	CompletionContext,
 	CompletionItem,
 	CompletionItemKind,
-	Disposable,
-	DocumentSelector,
 	Hover,
 	InlayHint,
 	InlayHintKind,
 	Location,
 	MarkdownString,
-	ParameterInformation,
 	Position,
 	Range,
+	RelativePattern,
 	SignatureHelp,
 	SignatureInformation,
 	SnippetString,
@@ -21,22 +18,23 @@ import {
 	Uri,
 	languages,
 } from "vscode";
+import { Session } from "..";
 
 import * as snippets from "../../snippets.json";
 import { isPositionInString } from "../../utilities/functions";
 
 export class ProviderHandler {
-	disposables: Disposable[] = [];
-
-	constructor(session: Session, documentSelector: DocumentSelector) {
+	constructor(session: Session) {
 		const workspacePath = session.workspacePath;
 		const registryHandler = session.registryHandler;
 		const registry = registryHandler.registry;
 
+		const documentSelector = { language: "skript", pattern: new RelativePattern(workspacePath, "**/*.sk") };
+
 		// --------------------------------
 		// COMPLETION
 		// --------------------------------
-		this.disposables.push(
+		session.context.subscriptions.push(
 			languages.registerCompletionItemProvider(
 				documentSelector,
 				{
@@ -114,7 +112,7 @@ export class ProviderHandler {
 		// --------------------------------
 		// HOVER
 		// --------------------------------
-		this.disposables.push(
+		session.context.subscriptions.push(
 			languages.registerHoverProvider(documentSelector, {
 				provideHover: (document: TextDocument, position: Position, token: CancellationToken) => {
 					const hoveredWord = document.getText(document.getWordRangeAtPosition(position));
@@ -136,7 +134,7 @@ export class ProviderHandler {
 		// --------------------------------
 		// DEFINITION
 		// --------------------------------
-		this.disposables.push(
+		session.context.subscriptions.push(
 			languages.registerDefinitionProvider(documentSelector, {
 				provideDefinition: (document: TextDocument, position: Position, token: CancellationToken) => {
 					const hoveredWord = document.getText(document.getWordRangeAtPosition(position));
@@ -155,65 +153,33 @@ export class ProviderHandler {
 		// --------------------------------
 		// SIGNATURE HELP
 		// --------------------------------
-		/* Delayed, disabled for now
-		this.disposables.push(
+		session.context.subscriptions.push(
 			languages.registerSignatureHelpProvider(
 				documentSelector,
 				{
 					provideSignatureHelp: (document: TextDocument, position: Position, token: CancellationToken) => {
-						const currentLine = document.lineAt(position.line).text;
-						//const currentWord = document.getText(document.getWordRangeAtPosition(position));
+						const script = registryHandler.getScript(document.uri.path);
+						if (!script) return;
 
-						// Check if its in declaration
-						const fullLine = document.getText(new Range(new Position(position.line, 0), new Position(position.line, Infinity)));
-						if (fullLine.startsWith("function ")) {
-							return;
-						}
-
-						// Get the function
-						const functionNameMatch = currentLine.match(/([a-zA-Z_][\w]*)\s*\(/);
-						const functionName = functionNameMatch ? functionNameMatch[1] : "";
-						const func = registryHandler.getFunction(functionName);
+						const use = script.meta.functionUses.find((v) => {
+							return position.isAfter(v.range.start) && position.isBefore(v.range.end); // if position is within the range
+						});
+						if (!use) return;
+						const func = registryHandler.getFunction(use.name);
 						if (!func) return;
 
-						// Get the written arguments
-						const argsString = currentLine.substring(currentLine.indexOf("(") + 1, position.character);
-						const argsText = argsString.split(",").map((arg) => arg.trim());
+						const charIndex = position.character - use.range.start.character;
 
-						// Prepare information
-						const index = argsText.length - 1;
-						const paramData = func.params[index];
+						const paramCharIndex = charIndex - use.name.length - 1;
+						if (paramCharIndex < 0) return;
+
+						const paramsTextToCursor = paramCharIndex === 0 ? "" : use.params.substring(0, paramCharIndex);
+						const paramIndex = paramsTextToCursor.split(",").length - 1;
+
+						const paramData = func.params[paramIndex];
 						if (!paramData) return;
 
-						// Check if the position is within the function call parentheses
-						const parenthesesStack: string[] = [];
-						let withinFunctionCall = true;
-						let foundOpeningParenthesis = false;
-
-						for (let i = 0; i < currentLine.length; i++) {
-							const char = currentLine[i];
-
-							if (char === "(") {
-								parenthesesStack.push(char);
-								foundOpeningParenthesis = true;
-							} else if (char === ")" && foundOpeningParenthesis) {
-								parenthesesStack.pop();
-							}
-
-							if (i === position.character) {
-								break;
-							}
-						}
-
-						if (parenthesesStack.length > 0) {
-							withinFunctionCall = false;
-						}
-
-						if (!withinFunctionCall) {
-							return null;
-						}
-
-						// Create signatures
+						// Create signature
 						const help = new SignatureHelp();
 
 						const sign = new SignatureInformation(`${paramData.name}: ${paramData.type}`);
@@ -227,12 +193,52 @@ export class ProviderHandler {
 				{ triggerCharacters: ["(", ","], retriggerCharacters: ["(", ","] } // Specify trigger and retrigger characters
 			)
 		);
-		*/
-	}
 
-	dispose() {
-		for (const disposable of this.disposables) {
-			if (disposable.dispose) disposable.dispose();
-		}
+		// --------------------------------
+		// INLAY HINT
+		// --------------------------------
+		session.context.subscriptions.push(
+			languages.registerInlayHintsProvider(documentSelector, {
+				provideInlayHints: (document: TextDocument, range: Range, token: CancellationToken) => {
+					if (!session.configuration.get("inlayHints")) return null;
+
+					const script = registryHandler.getScript(document.uri.path);
+					if (!script) return;
+
+					const hints: InlayHint[] = [];
+					const text = document.getText(range);
+
+					script.meta.functionUses.forEach((use) => {
+						const func = registryHandler.getFunction(use.name);
+						if (!func) return;
+
+						// check if use is within the range to compute for
+						if (!use.range.start.isAfterOrEqual(range.start) || !use.range.end.isBeforeOrEqual(range.end)) return;
+
+						let charIndex = use.name.length + 1;
+						let paramIndex = 0;
+
+						for (const paramText of use.params.split(",")) {
+							if (paramText.trim() === "") continue;
+
+							while (use.params[charIndex - use.name.length - 1] === " ") {
+								charIndex += 1;
+							}
+
+							const paramData = func.params[paramIndex];
+							if (paramData) {
+								const pos = new Position(use.range.start.line, charIndex + use.range.start.character);
+								hints.push(new InlayHint(pos, `${paramData.name}: `, InlayHintKind.Parameter));
+							}
+
+							charIndex += paramText.length + 1;
+							paramIndex += 1;
+						}
+					});
+
+					return hints;
+				},
+			})
+		);
 	}
 }
