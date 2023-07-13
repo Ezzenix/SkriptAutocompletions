@@ -7,10 +7,10 @@ Skript Autocompletes is a Visual Studio Code Extension that makes writing Minecr
 * Function autocompletions
 * Function argument help
 * Function argument inlay hints (off by default)
-* Function goto definition
 * Works across files
 * Private functions for autocompletion
 * Multi-line toggle comment (ALT+A)
+* Function goto definition
 * Built-in colorpicker
 * Basic diagnostics
 * Snippets

@@ -31,3 +31,21 @@ export function isPathWithin(path: string, within: string) {
 	within = fixPath(within);
 	return path.startsWith(within);
 }
+
+export function getFirstCharIndexInLine(line: string) {
+	let charIndex = 0;
+	while ((isWhitespace(line[charIndex]) || line[charIndex] === "#") && charIndex < line.length - 1) {
+		charIndex++;
+	}
+	return charIndex;
+}
+
+export function isCommented(line: string) {
+	if (typeof line !== "string") return false;
+	return line.trim().startsWith("#");
+}
+
+export function isWhitespace(char: string) {
+	if (typeof char !== "string") return false;
+	return char.trim() === "";
+}

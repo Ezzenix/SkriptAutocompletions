@@ -3,6 +3,7 @@ import { Session } from "./session/index";
 import { fixPath } from "./utilities/fsWrapper";
 import { colorPicker } from "./features/colorPicker";
 import { commentLines } from "./features/commentLines";
+import { formatDocument } from "./features/formatter";
 
 export function activate(context: ExtensionContext) {
 	console.log("skript autocompletions activated");
@@ -46,6 +47,14 @@ export function activate(context: ExtensionContext) {
 	// Initialize features
 	colorPicker(context);
 	commentLines(context);
+
+	/*
+	context.subscriptions.push(
+		workspace.onWillSaveTextDocument((event) => {
+			formatDocument();
+		})
+	);
+	*/
 }
 
 export function deactivate() {

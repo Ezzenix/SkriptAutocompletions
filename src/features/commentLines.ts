@@ -1,22 +1,5 @@
 import { ExtensionContext, Position, Range, commands, window } from "vscode";
-
-function isCommented(line: string) {
-	if (typeof line !== "string") return false;
-	return line.trim().startsWith("#");
-}
-
-function isWhitespace(char: string) {
-	if (typeof char !== "string") return false;
-	return char.trim() === "";
-}
-
-function getFirstCharIndexInLine(line: string) {
-	let charIndex = 0;
-	while ((isWhitespace(line[charIndex]) || line[charIndex] === "#") && charIndex < line.length - 1) {
-		charIndex++;
-	}
-	return charIndex;
-}
+import { getFirstCharIndexInLine, isCommented, isWhitespace } from "../utilities/functions";
 
 function execute() {
 	const editor = window.activeTextEditor;
