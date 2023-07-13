@@ -80,7 +80,8 @@ export class RegistryHandler {
 				if (commentText.trim().length !== 0) {
 					comments.unshift(commentText);
 				}
-			} else if (text.trim().length === 0) {
+			} else if (text.trim().length === 0 && comments.length === 0) {
+				// if its empty then continue, but only if no comments have been added yet
 				continue;
 			} else {
 				break;

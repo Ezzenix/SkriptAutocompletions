@@ -2,7 +2,6 @@ import { ExtensionContext, FileSystemWatcher, RelativePattern, Uri, WorkspaceCon
 import { DiagnosticHandler } from "./handlers/diagnosticHandler";
 import { ProviderHandler } from "./handlers/providerHandler";
 import { RegistryHandler } from "./handlers/registryHandler";
-import { colorPicker } from "./handlers/colorPicker";
 
 export class Session {
 	context: ExtensionContext;
@@ -37,8 +36,6 @@ export class Session {
 		// Start
 		this.diagnosticHandler.start();
 		this.registryHandler.start();
-
-		colorPicker(this);
 	}
 
 	fileCreated(uri: Uri) {

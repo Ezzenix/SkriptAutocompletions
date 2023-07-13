@@ -1,6 +1,8 @@
 import { ExtensionContext, WorkspaceFolder, workspace } from "vscode";
 import { Session } from "./session/index";
 import { fixPath } from "./utilities/fsWrapper";
+import { colorPicker } from "./features/colorPicker";
+import { commentLines } from "./features/commentLines";
 
 export function activate(context: ExtensionContext) {
 	console.log("skript autocompletions activated");
@@ -40,6 +42,10 @@ export function activate(context: ExtensionContext) {
 	for (const workspaceFolder of workspace.workspaceFolders) {
 		createSession(workspaceFolder);
 	}
+
+	// Initialize features
+	colorPicker(context);
+	commentLines(context);
 }
 
 export function deactivate() {

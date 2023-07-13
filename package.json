@@ -2,7 +2,7 @@
 	"name": "skript-autocompletions",
 	"displayName": "Skript Autocompletions",
 	"description": "Provides autocompletions for Minecraft Skript",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"publisher": "Ezzenix",
 	"keywords": [
 		"skript",
@@ -45,7 +45,14 @@
 					"description": "Show inlay hints on function arguments."
 				}
 			}
-		}
+		},
+		"keybindings": [
+			{
+				"command": "skriptAutocompletions.commentLines",
+				"key": "alt+a",
+				"mac": "cmd+/"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",

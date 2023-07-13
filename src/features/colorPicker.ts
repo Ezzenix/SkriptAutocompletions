@@ -7,13 +7,14 @@ import {
 	Color,
 	ColorInformation,
 	ColorPresentation,
+	ExtensionContext,
 	Position,
 	Range,
 	RelativePattern,
 	TextDocument,
 	languages,
 } from "vscode";
-import { Session } from "..";
+import { Session } from "../session";
 
 function getPos(text: string, index: number): Position {
 	const nMatches = Array.from(text.slice(0, index).matchAll(/\n/g));
@@ -57,10 +58,9 @@ function rgbaToHex(r: number, g: number, b: number, a?: number) {
 }
 
 // Main function to register
-export function colorPicker(session: Session) {
-	languages.registerColorProvider(
-		{ language: "skript", pattern: new RelativePattern(session.workspacePath, "**/*.sk") },
-		{
+export function colorPicker(context: ExtensionContext) {
+	context.subscriptions.push(
+		languages.registerColorProvider("skript", {
 			// hex to rgba
 			provideDocumentColors(document: TextDocument) {
 				const text = document.getText();
@@ -94,6 +94,6 @@ export function colorPicker(session: Session) {
 
 				return [presentation];
 			},
-		}
+		})
 	);
 }
