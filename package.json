@@ -2,7 +2,7 @@
 	"name": "skript-autocompletions",
 	"displayName": "Skript Autocompletions",
 	"description": "Provides autocompletions for Minecraft Skript",
-	"version": "0.2.4",
+	"version": "0.2.5",
 	"publisher": "Ezzenix",
 	"keywords": [
 		"skript",
@@ -51,6 +51,13 @@
 				"command": "skriptAutocompletions.commentLines",
 				"key": "alt+a",
 				"mac": "cmd+/"
+			}
+		],
+		"commands": [
+			{
+				"command": "skriptAutocompletions.dumpRegistry",
+				"title": "Dump Registry (Debug)",
+				"category": "SkriptAutocompletions"
 			}
 		]
 	},

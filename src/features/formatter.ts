@@ -1,5 +1,4 @@
-import { Position, Range, TextDocument, window, workspace } from "vscode";
-import { getFirstCharIndexInLine } from "../utilities/functions";
+import { Position, Range, window } from "vscode";
 
 /*
 THIS IS NOT WORKING YET

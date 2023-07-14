@@ -21,7 +21,7 @@ import {
 import { Session } from "..";
 
 import * as snippets from "../../snippets.json";
-import { isPositionInString } from "../../utilities/functions";
+import { Parser } from "./parser";
 
 export class ProviderHandler {
 	constructor(session: Session) {
@@ -34,7 +34,7 @@ export class ProviderHandler {
 		// --------------------------------
 		// COMPLETION
 		// --------------------------------
-		session.context.subscriptions.push(
+		session.subscriptions.push(
 			languages.registerCompletionItemProvider(
 				documentSelector,
 				{
@@ -44,7 +44,7 @@ export class ProviderHandler {
 						token: CancellationToken,
 						context: CompletionContext
 					) => {
-						if (isPositionInString(document.lineAt(position.line).text, position.character)) {
+						if (Parser.isPositionInString(document.lineAt(position.line).text, position.character)) {
 							return;
 						}
 
@@ -112,7 +112,7 @@ export class ProviderHandler {
 		// --------------------------------
 		// HOVER
 		// --------------------------------
-		session.context.subscriptions.push(
+		session.subscriptions.push(
 			languages.registerHoverProvider(documentSelector, {
 				provideHover: (document: TextDocument, position: Position, token: CancellationToken) => {
 					const hoveredWord = document.getText(document.getWordRangeAtPosition(position));
@@ -134,7 +134,7 @@ export class ProviderHandler {
 		// --------------------------------
 		// DEFINITION
 		// --------------------------------
-		session.context.subscriptions.push(
+		session.subscriptions.push(
 			languages.registerDefinitionProvider(documentSelector, {
 				provideDefinition: (document: TextDocument, position: Position, token: CancellationToken) => {
 					const hoveredWord = document.getText(document.getWordRangeAtPosition(position));
@@ -153,7 +153,7 @@ export class ProviderHandler {
 		// --------------------------------
 		// SIGNATURE HELP
 		// --------------------------------
-		session.context.subscriptions.push(
+		session.subscriptions.push(
 			languages.registerSignatureHelpProvider(
 				documentSelector,
 				{
@@ -197,7 +197,7 @@ export class ProviderHandler {
 		// --------------------------------
 		// INLAY HINT
 		// --------------------------------
-		session.context.subscriptions.push(
+		session.subscriptions.push(
 			languages.registerInlayHintsProvider(documentSelector, {
 				provideInlayHints: (document: TextDocument, range: Range, token: CancellationToken) => {
 					if (!session.configuration.get("inlayHints")) return null;

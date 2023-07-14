@@ -1,4 +1,4 @@
-import { ExtensionContext, FileSystemWatcher, RelativePattern, Uri, WorkspaceConfiguration, workspace } from "vscode";
+import { Disposable, ExtensionContext, FileSystemWatcher, RelativePattern, Uri, WorkspaceConfiguration, commands, workspace } from "vscode";
 import { DiagnosticHandler } from "./handlers/diagnosticHandler";
 import { ProviderHandler } from "./handlers/providerHandler";
 import { RegistryHandler } from "./handlers/registryHandler";
@@ -8,6 +8,7 @@ export class Session {
 	workspacePath: string;
 	watcher: FileSystemWatcher;
 	configuration: WorkspaceConfiguration;
+	subscriptions: Disposable[];
 
 	registryHandler: RegistryHandler;
 	diagnosticHandler: DiagnosticHandler;
@@ -17,6 +18,7 @@ export class Session {
 		this.context = context;
 		this.workspacePath = workspacePath;
 		this.configuration = workspace.getConfiguration("skriptAutocompletions");
+		this.subscriptions = [];
 
 		// Initialize handlers
 		this.diagnosticHandler = new DiagnosticHandler(this);
@@ -25,17 +27,26 @@ export class Session {
 
 		// Create file watcher
 		const pattern = new RelativePattern(workspacePath, "*.sk");
-		this.watcher = workspace.createFileSystemWatcher(pattern, false, false, false);
+		const watcher = workspace.createFileSystemWatcher(pattern, false, false, false);
 		const fileChanged = this.fileChanged.bind(this);
 		const fileCreated = this.fileCreated.bind(this);
 		const fileDeleted = this.fileDeleted.bind(this);
-		this.watcher.onDidChange(fileChanged);
-		this.watcher.onDidCreate(fileCreated);
-		this.watcher.onDidDelete(fileDeleted);
+		watcher.onDidChange(fileChanged);
+		watcher.onDidCreate(fileCreated);
+		watcher.onDidDelete(fileDeleted);
+		this.subscriptions.push(watcher);
 
 		// Start
 		this.diagnosticHandler.start();
 		this.registryHandler.start();
+
+		// Debug command
+		this.subscriptions.push(
+			commands.registerCommand("skriptAutocompletions.dumpRegistry", () => {
+				console.log(`Registry dump for ${this.workspacePath}:`);
+				console.log(this.registryHandler.registry);
+			})
+		);
 	}
 
 	fileCreated(uri: Uri) {
@@ -52,6 +63,10 @@ export class Session {
 	}
 
 	destroy() {
-		this.watcher.dispose();
+		for (const disposable of this.subscriptions) {
+			if (disposable.dispose) {
+				disposable.dispose();
+			}
+		}
 	}
 }

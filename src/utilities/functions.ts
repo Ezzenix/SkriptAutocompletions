@@ -1,51 +1,25 @@
 import { TextDocument, Uri, workspace } from "vscode";
-import { fixPath } from "./fsWrapper";
-
-export function isPositionInString(line: string, character: number): boolean {
-	let insideString = false;
-	let isInEscapeSequence = false;
-
-	for (let i = 0; i < character; i++) {
-		const char = line[i];
-
-		if (char === '"') {
-			if (!isInEscapeSequence) {
-				insideString = !insideString;
-			}
-		}
-
-		isInEscapeSequence = char === "\\" && !isInEscapeSequence;
-	}
-
-	return insideString;
-}
+import { fixPath, readFile } from "./fsWrapper";
 
 export function getDocumentFromPath(filePath: string): TextDocument | undefined {
-	const uri = Uri.file(filePath);
-	const document = workspace.textDocuments.find((doc) => doc.uri.toString() === uri.toString());
+	filePath = fixPath(filePath);
+	const document = workspace.textDocuments.find((doc) => fixPath(doc.uri.fsPath) === filePath);
 	return document;
+}
+
+// Gets either source from document or from filesystem
+export function getLatestSource(path: string) {
+	path = fixPath(path);
+	const document = getDocumentFromPath(path);
+	if (document) {
+		return document.getText();
+	} else {
+		return readFile(path);
+	}
 }
 
 export function isPathWithin(path: string, within: string) {
 	path = fixPath(path);
 	within = fixPath(within);
 	return path.startsWith(within);
-}
-
-export function getFirstCharIndexInLine(line: string) {
-	let charIndex = 0;
-	while ((isWhitespace(line[charIndex]) || line[charIndex] === "#") && charIndex < line.length - 1) {
-		charIndex++;
-	}
-	return charIndex;
-}
-
-export function isCommented(line: string) {
-	if (typeof line !== "string") return false;
-	return line.trim().startsWith("#");
-}
-
-export function isWhitespace(char: string) {
-	if (typeof char !== "string") return false;
-	return char.trim() === "";
 }

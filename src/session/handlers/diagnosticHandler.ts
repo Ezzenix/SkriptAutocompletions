@@ -1,18 +1,7 @@
-import {
-	Diagnostic,
-	DiagnosticCollection,
-	DiagnosticRelatedInformation,
-	DiagnosticSeverity,
-	Location,
-	TextDocument,
-	Uri,
-	languages,
-	window,
-	workspace,
-} from "vscode";
+import { Diagnostic, DiagnosticCollection, DiagnosticRelatedInformation, DiagnosticSeverity, Location, Uri, languages } from "vscode";
 import { Session } from "..";
-import { getDocumentFromPath, isPathWithin } from "../../utilities/functions";
-import { Function, Script } from "./registryHandler";
+import { getDocumentFromPath, getLatestSource } from "../../utilities/functions";
+import { Function, Script } from "./parser";
 import { fixPath, readFile } from "../../utilities/fsWrapper";
 
 function checkAlreadyDeclaredFunction(session: Session, script: Script, source: string, diagnostics: Diagnostic[]) {
@@ -104,36 +93,13 @@ export class DiagnosticHandler {
 		this.collection = languages.createDiagnosticCollection("skript-autocompletions-diagnostics");
 	}
 
-	start() {
-		/* if (window.activeTextEditor) {
-			this.updateDiagnostics(window.activeTextEditor.document.uri);
-		} */
-		/* this.session.context.subscriptions.push(
-			window.onDidChangeActiveTextEditor((editor) => {
-				this.updateDiagnostics(editor.document.uri);
-			})
-		); */
-	}
+	start() {}
 
-	/**
-	 * Gets the source of an uri, if a document is open use that (unsaved source also)
-	 * Otherwise read the file from the filesystem
-	 */
-	private getSource(uri: Uri) {
-		const path = fixPath(uri.path);
-		const document = getDocumentFromPath(path);
-		if (document) {
-			return document.getText();
-		} else {
-			return readFile(path);
-		}
-	}
-
-	updateDiagnostics(uri: Uri) {
+	runDiagnostics(uri: Uri) {
 		const script = this.session.registryHandler.getScript(uri.path);
 		if (!script) return;
 
-		const source = this.getSource(uri);
+		const source = getLatestSource(uri.path);
 		if (!source) return;
 
 		// gather diagnotstics
@@ -144,5 +110,13 @@ export class DiagnosticHandler {
 
 		// set collection
 		this.collection.set(uri, diagnostics);
+	}
+
+	runDiagnosticOnAllFiles() {
+		for (const script of this.session.registryHandler.registry) {
+			const uri = Uri.file(script.path);
+			if (!uri) continue;
+			this.session.diagnosticHandler.runDiagnostics(uri);
+		}
 	}
 }

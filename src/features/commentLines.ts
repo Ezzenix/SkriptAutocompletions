@@ -1,5 +1,5 @@
 import { ExtensionContext, Position, Range, commands, window } from "vscode";
-import { getFirstCharIndexInLine, isCommented, isWhitespace } from "../utilities/functions";
+import { Parser } from "../session/handlers/parser";
 
 function execute() {
 	const editor = window.activeTextEditor;
@@ -18,7 +18,7 @@ function execute() {
 			let commentedAmount = 0;
 			for (let line = startLine; line <= endLine; line++) {
 				const text = document.lineAt(line).text;
-				if (isCommented(text)) commentedAmount++;
+				if (Parser.isCommented(text)) commentedAmount++;
 			}
 			const action = commentedAmount / lineAmount > 0.5 ? "uncomment" : "comment";
 
@@ -26,13 +26,13 @@ function execute() {
 				const text = document.lineAt(line).text;
 				if (text.trim() === "") {
 					continue; // do not change completely empty lines
-				} else if (isCommented(text) && action === "uncomment") {
+				} else if (Parser.isCommented(text) && action === "uncomment") {
 					const charIndex = text.indexOf("#");
 					const pos1 = new Position(line, charIndex);
 					const pos2 = new Position(line, charIndex + 1);
 					editBuilder.replace(new Range(pos1, pos2), "");
-				} else if (!isCommented(text) && action === "comment") {
-					const charIndex = getFirstCharIndexInLine(text);
+				} else if (!Parser.isCommented(text) && action === "comment") {
+					const charIndex = Parser.getFirstCharIndexInLine(text);
 					const pos1 = new Position(line, charIndex);
 					const pos2 = new Position(line, charIndex);
 					editBuilder.replace(new Range(pos1, pos2), "#");
