@@ -1,5 +1,5 @@
 import { readdirSync } from "fs";
-import { join } from "path";
+import { basename, join } from "path";
 import { Uri, workspace } from "vscode";
 import { Session } from "..";
 import { fileStat, fixPath } from "../../utilities/fsWrapper";
@@ -67,6 +67,10 @@ export class RegistryHandler {
 
 	queueForUpdate(path: string) {
 		path = fixPath(path);
+
+		const name = basename(path);
+		if (name.startsWith("-")) return; // skip disabled scripts
+
 		if (this.updateQueue.find((v) => v === path)) return;
 		this.updateQueue.push(path);
 
