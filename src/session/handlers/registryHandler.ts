@@ -53,10 +53,14 @@ export class RegistryHandler {
 		this.updateQueue.length = 0; // reset queue
 
 		// look for duplicates just to be sure
+		const possbilePaths = this.getScriptPaths();
 		const traversedPaths = new Set();
 		this.registry = this.registry.filter((script) => {
 			const path = script.path.toLowerCase();
+
 			if (traversedPaths.has(path)) return false;
+			if (!possbilePaths.includes(path)) return false;
+
 			traversedPaths.add(path);
 			return true;
 		});
@@ -67,9 +71,6 @@ export class RegistryHandler {
 
 	queueForUpdate(path: string) {
 		path = fixPath(path);
-
-		const name = basename(path);
-		if (name.startsWith("-")) return; // skip disabled scripts
 
 		if (this.updateQueue.find((v) => v === path)) return;
 		this.updateQueue.push(path);
@@ -104,7 +105,7 @@ export class RegistryHandler {
 	}
 
 	// Get all paths to .sk files in the workspace
-	private getScriptPaths() {
+	getScriptPaths() {
 		const scripts = [];
 
 		function traverse(path: string) {
@@ -116,7 +117,11 @@ export class RegistryHandler {
 					traverse(join(path, file));
 				});
 			} else {
-				if (path.endsWith(".sk")) scripts.push(fixPath(path));
+				const name = basename(path);
+				if (name.endsWith(".sk") && !name.startsWith("-")) {
+					// only non-disabled .sk files
+					scripts.push(fixPath(path));
+				}
 			}
 		}
 

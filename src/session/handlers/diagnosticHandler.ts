@@ -118,5 +118,13 @@ export class DiagnosticHandler {
 			if (!uri) continue;
 			this.session.diagnosticHandler.runDiagnostics(uri);
 		}
+
+		const possiblePaths = this.session.registryHandler.getScriptPaths();
+		this.collection.forEach((uri: Uri) => {
+			const path = fixPath(uri.fsPath);
+			if (!possiblePaths.includes(path)) {
+				this.collection.delete(uri);
+			}
+		});
 	}
 }
