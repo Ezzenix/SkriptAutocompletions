@@ -13,8 +13,9 @@ import {
 import { Session } from "..";
 import { getDocumentFromPath, isPathWithin } from "../../utilities/functions";
 import { Function, Script } from "./registryHandler";
+import { fixPath, readFile } from "../../utilities/fsWrapper";
 
-function checkAlreadyDeclaredFunction(session: Session, script: Script, document: TextDocument, diagnostics: Diagnostic[]) {
+function checkAlreadyDeclaredFunction(session: Session, script: Script, source: string, diagnostics: Diagnostic[]) {
 	const traversedFunctions: { [key: string]: Function[] } = {}; // object with names as key and all declarations as values
 	for (const script of session.registryHandler.registry) {
 		for (const func of script.meta.functions) {
@@ -78,7 +79,7 @@ const BUILTIN_SKRIPT_FUNCTIONS = [
 	"vector",
 	"world",
 ];
-function checkNonExistingFunctionUse(session: Session, script: Script, document: TextDocument, diagnostics: Diagnostic[]) {
+function checkNonExistingFunctionUse(session: Session, script: Script, source: string, diagnostics: Diagnostic[]) {
 	for (const use of script.meta.functionUses) {
 		if (BUILTIN_SKRIPT_FUNCTIONS.includes(use.name)) continue;
 		const func = session.registryHandler.getFunction(use.name);
@@ -104,31 +105,44 @@ export class DiagnosticHandler {
 	}
 
 	start() {
-		if (window.activeTextEditor) {
-			this.updateDiagnostics(window.activeTextEditor.document);
-		}
-		this.session.context.subscriptions.push(
+		/* if (window.activeTextEditor) {
+			this.updateDiagnostics(window.activeTextEditor.document.uri);
+		} */
+		/* this.session.context.subscriptions.push(
 			window.onDidChangeActiveTextEditor((editor) => {
-				this.updateDiagnostics(editor.document);
+				this.updateDiagnostics(editor.document.uri);
 			})
-		);
+		); */
 	}
 
-	updateDiagnostics(document: TextDocument | string) {
-		if (typeof document === "string") {
-			document = getDocumentFromPath(document);
+	/**
+	 * Gets the source of an uri, if a document is open use that (unsaved source also)
+	 * Otherwise read the file from the filesystem
+	 */
+	private getSource(uri: Uri) {
+		const path = fixPath(uri.path);
+		const document = getDocumentFromPath(path);
+		if (document) {
+			return document.getText();
+		} else {
+			return readFile(path);
 		}
-		if (!document) return this.collection.clear();
+	}
+
+	updateDiagnostics(uri: Uri) {
+		const script = this.session.registryHandler.getScript(uri.path);
+		if (!script) return;
+
+		const source = this.getSource(uri);
+		if (!source) return;
 
 		// gather diagnotstics
 		const diagnostics = [];
-		const thisScript = this.session.registryHandler.getScript(document.uri.path);
-		if (!thisScript) return;
 
-		checkAlreadyDeclaredFunction(this.session, thisScript, document, diagnostics);
-		checkNonExistingFunctionUse(this.session, thisScript, document, diagnostics);
+		checkAlreadyDeclaredFunction(this.session, script, source, diagnostics);
+		checkNonExistingFunctionUse(this.session, script, source, diagnostics);
 
 		// set collection
-		this.collection.set(document.uri, diagnostics);
+		this.collection.set(uri, diagnostics);
 	}
 }

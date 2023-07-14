@@ -78,7 +78,7 @@ export class RegistryHandler {
 			if (match) {
 				const commentText = match[1];
 				if (commentText.trim().length !== 0) {
-					comments.unshift(commentText);
+					comments.unshift(commentText.trim());
 				}
 			} else if (text.trim().length === 0 && comments.length === 0) {
 				// if its empty then continue, but only if no comments have been added yet
@@ -161,7 +161,8 @@ export class RegistryHandler {
 				const usageEndPosition = regex.lastIndex;
 				const range = new Range(new Position(lineNumber, usageStartPosition), new Position(lineNumber, usageEndPosition));
 
-				if (isPositionInString(line, range.start.character)) continue;
+				if (line.trim().startsWith("#")) continue; // ignore in comments
+				if (isPositionInString(line, range.start.character)) continue; // ignore in strings
 
 				uses.push({
 					name: functionName,
@@ -204,9 +205,17 @@ export class RegistryHandler {
 		this.registry.push(script);
 
 		// diagnostics
-		this.session.diagnosticHandler.updateDiagnostics(path);
+		this.runDiagnosticOnAllFiles();
 
 		//console.log(this.registry);
+	}
+
+	private runDiagnosticOnAllFiles() {
+		for (const script of this.registry) {
+			const uri = Uri.file(script.path);
+			if (!uri) continue;
+			this.session.diagnosticHandler.updateDiagnostics(uri);
+		}
 	}
 
 	// -------------
