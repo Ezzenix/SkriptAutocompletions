@@ -19,7 +19,8 @@ export function fixPath(path: string) {
 		path = path.substring(0, path.length - 1);
 	}
 
-	path = path.charAt(0).toLowerCase() + path.slice(1); // make first character lowercase, for some reason its not always that
+	path = path.toLowerCase(); // filesystem is not case-sensitive (at least on windows)
+	//path = path.charAt(0).toLowerCase() + path.slice(1); // make first character lowercase, for some reason its not always that
 
 	return path;
 }

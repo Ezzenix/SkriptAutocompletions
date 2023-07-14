@@ -55,11 +55,10 @@ export class RegistryHandler {
 		// listen for document changes to update registry for
 		this.session.context.subscriptions.push(
 			workspace.onDidChangeTextDocument((e) => {
-				const path = fixPath(e.document.uri.path);
+				if (e.contentChanges.length === 0) return;
+				const path = fixPath(e.document.uri.fsPath);
 				if (isPathWithin(path, this.session.workspacePath)) {
-					if (e.contentChanges.length > 0) {
-						this.updateRegistryFor(path, e.document.getText());
-					}
+					this.updateRegistryFor(path, e.document.getText());
 				}
 			})
 		);
