@@ -1,26 +1,27 @@
-import { readdirSync } from "fs";
-import { basename, join } from "path";
 import { Uri, workspace } from "vscode";
 import { Session } from "..";
-import { fileStat, fixPath } from "../../utilities/fsWrapper";
-import { isPathWithin } from "../../utilities/functions";
-import { Parser, Function, Script } from "./parser";
+import { fixPath } from "../../utilities/fsWrapper";
+import { getScriptPaths, isPathWithin } from "../../utilities/functions";
+import { Parser, Function, Script } from "../../utilities/parser";
+import { RERGISTRY_UPDATE_THRESHOLD } from "../../constants";
 
+/**
+ * Handles storing and updating script information
+ */
 export class RegistryHandler {
 	session: Session;
-	registry: Script[];
-	updateQueue: string[];
+	registry = new Map<string, Script>();
+	updateQueue = new Set<string>();
 	hasQueuedUpdate = false;
 
 	constructor(session: Session) {
 		this.session = session;
-		this.registry = [];
-		this.updateQueue = [];
 	}
 
+	/** Runs when the diagnosticsHandler has initialized */
 	start() {
-		this.getScriptPaths().forEach((path) => {
-			this.queueForUpdate(path);
+		getScriptPaths(this.session.workspacePath).forEach((path) => {
+			this.queueUpdate(path);
 		});
 
 		// listen for document changes to update registry for
@@ -29,63 +30,51 @@ export class RegistryHandler {
 				if (e.contentChanges.length === 0) return;
 				const path = fixPath(e.document.uri.fsPath);
 				if (isPathWithin(path, this.session.workspacePath)) {
-					this.queueForUpdate(path);
+					this.queueUpdate(path);
 				}
 			})
 		);
 	}
 
-	// UPDATE
-	private _update(path: string) {
-		path = fixPath(path);
-
-		const script = Parser.parseScript(path, this.session.workspacePath);
-		if (!script) return; // something went wrong
-
-		this.removeFromRegistryByPath(path);
-		this.registry.push(script);
-	}
-
+	/** Registry */
 	private _clearUpdateQueue() {
-		for (const path of this.updateQueue) {
-			this._update(path);
-		}
-		this.updateQueue.length = 0; // reset queue
-
-		// look for duplicates just to be sure
-		const possbilePaths = this.getScriptPaths();
-		const traversedPaths = new Set();
-		this.registry = this.registry.filter((script) => {
-			const path = script.path.toLowerCase();
-
-			if (traversedPaths.has(path)) return false;
-			if (!possbilePaths.includes(path)) return false;
-
-			traversedPaths.add(path);
-			return true;
+		this.updateQueue.forEach((path) => {
+			/** Update each script */
+			const script = Parser.parseScript(path, this.session.workspacePath);
+			if (script) {
+				this.registry.set(path, script);
+			} else {
+				this.registry.delete(path);
+			}
 		});
 
-		// run diagnostics
+		// console.log(this.registry)
+
+		this.updateQueue.clear();
 		this.session.diagnosticHandler.runDiagnosticOnAllFiles();
 	}
 
-	queueForUpdate(path: string) {
+	queueUpdate(path: string) {
 		path = fixPath(path);
 
-		if (this.updateQueue.find((v) => v === path)) return;
-		this.updateQueue.push(path);
+		if (this.updateQueue.has(path)) return;
+		this.updateQueue.add(path);
 
 		if (this.hasQueuedUpdate) return;
 		this.hasQueuedUpdate = true;
 		setTimeout(() => {
 			this._clearUpdateQueue();
 			this.hasQueuedUpdate = false;
-		}, 500);
+		}, RERGISTRY_UPDATE_THRESHOLD);
 	}
 
-	// Gets a function by name
+	remove(path: string) {
+		this.registry.delete(fixPath(path));
+	}
+
+	/** Helper functions */
 	getFunction(name: string): Function | void {
-		for (const script of this.registry) {
+		for (const [_, script] of Array.from(this.registry.entries())) {
 			for (const func of script.meta.functions) {
 				if (func.name === name) {
 					return func;
@@ -94,57 +83,18 @@ export class RegistryHandler {
 		}
 	}
 
-	// Gets a script by name
 	getScript(path: string) {
-		path = fixPath(path);
-		for (const script of this.registry) {
-			if (script.path === path) {
-				return script;
-			}
-		}
+		return this.registry.get(fixPath(path));
 	}
 
-	// Get all paths to .sk files in the workspace
-	getScriptPaths() {
-		const scripts = [];
-
-		function traverse(path: string) {
-			const stat = fileStat(path);
-			if (!stat) return; // something went wrong or file doesn't exist
-
-			if (stat.isDirectory()) {
-				readdirSync(path).forEach((file) => {
-					traverse(join(path, file));
-				});
-			} else {
-				const name = basename(path);
-				if (name.endsWith(".sk") && !name.startsWith("-")) {
-					// only non-disabled .sk files
-					scripts.push(fixPath(path));
-				}
-			}
-		}
-
-		traverse(this.session.workspacePath);
-		return scripts;
-	}
-
-	private removeFromRegistryByPath(path: string) {
-		path = fixPath(path);
-		const script = this.registry.find((v) => v.path === path);
-		if (!script) return;
-		const index = this.registry.indexOf(script);
-		if (index === -1) return;
-		this.registry.splice(index, 1);
-	}
-
+	/** File changes */
 	fileCreated(uri: Uri) {
-		this.queueForUpdate(uri.path);
+		this.queueUpdate(uri.path);
 	}
 	fileDeleted(uri: Uri) {
-		this.removeFromRegistryByPath(uri.path);
+		this.remove(uri.path);
 	}
 	fileChanged(uri: Uri) {
-		this.queueForUpdate(uri.path);
+		this.queueUpdate(uri.path);
 	}
 }

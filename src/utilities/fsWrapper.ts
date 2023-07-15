@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { normalize, resolve } from "path";
+import { normalize } from "path";
 
 const DEBUG_MODE = true;
 

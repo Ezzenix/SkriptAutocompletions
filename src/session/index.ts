@@ -1,4 +1,15 @@
-import { Disposable, ExtensionContext, FileSystemWatcher, RelativePattern, Uri, WorkspaceConfiguration, commands, workspace } from "vscode";
+import {
+	Disposable,
+	ExtensionContext,
+	FileSystemWatcher,
+	RelativePattern,
+	Uri,
+	WorkspaceConfiguration,
+	commands,
+	env,
+	window,
+	workspace,
+} from "vscode";
 import { DiagnosticHandler } from "./handlers/diagnosticHandler";
 import { ProviderHandler } from "./handlers/providerHandler";
 import { RegistryHandler } from "./handlers/registryHandler";
@@ -43,8 +54,13 @@ export class Session {
 		// Debug command
 		this.subscriptions.push(
 			commands.registerCommand("skriptAutocompletions.dumpRegistry", () => {
-				console.log(`Registry dump for ${this.workspacePath}:`);
-				console.log(this.registryHandler.registry);
+				const array = new Array(this.registryHandler.registry.size);
+				this.registryHandler.registry.forEach((script) => array.push(script));
+
+				const json = JSON.stringify(array, (key, value) => (key === "script" ? undefined : value));
+
+				env.clipboard.writeText(json);
+				window.showInformationMessage("Registry dump copied to clipboard as JSON");
 			})
 		);
 	}

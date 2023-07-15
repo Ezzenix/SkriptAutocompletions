@@ -1,30 +1,9 @@
-/*
-	Not fully made by me
-*/
+/**
+ * Hex color picker
+ */
 
-import {
-	CancellationToken,
-	Color,
-	ColorInformation,
-	ColorPresentation,
-	ExtensionContext,
-	Position,
-	Range,
-	RelativePattern,
-	TextDocument,
-	languages,
-} from "vscode";
-import { Session } from "../session";
-
-function getPos(text: string, index: number): Position {
-	const nMatches = Array.from(text.slice(0, index).matchAll(/\n/g));
-
-	const lineNumber = nMatches.length;
-
-	const characterIndex = index - nMatches[lineNumber - 1].index;
-
-	return new Position(lineNumber, characterIndex - 1);
-}
+import { Color, ColorInformation, ColorPresentation, ExtensionContext, Range, TextDocument, languages } from "vscode";
+import { getPos } from "../utilities/functions";
 
 function hexToRgba(hex: string) {
 	hex = hex.replace("#", "");

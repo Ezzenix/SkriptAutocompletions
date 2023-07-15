@@ -1,5 +1,9 @@
+/**
+ * Allows you to comment multiple selected lines by pressing ALT+A
+ */
+
 import { ExtensionContext, Position, Range, commands, window } from "vscode";
-import { Parser } from "../session/handlers/parser";
+import { Parser } from "../utilities/parser";
 
 function execute() {
 	const editor = window.activeTextEditor;

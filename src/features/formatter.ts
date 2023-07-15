@@ -1,9 +1,11 @@
-import { Position, Range, window } from "vscode";
-
 /*
 THIS IS NOT WORKING YET
 NOT BEING USED
+
+PROBLEM: ITS IMPOSSIBLE
 */
+
+import { Position, Range, window } from "vscode";
 
 const NEW_KEYWORDS = ["function", "on", "command"];
 

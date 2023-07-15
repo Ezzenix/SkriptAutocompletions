@@ -1,14 +1,13 @@
 import { Position, Range } from "vscode";
-import { readFile } from "../../utilities/fsWrapper";
 import { basename } from "path";
-import { getDocumentFromPath, getLatestSource } from "../../utilities/functions";
+import { getLatestSource } from "./functions";
 
 export type FunctionParam = {
 	name: string;
 	type: string;
 };
 
-export type FunctionUse = {
+export type FunctionCall = {
 	name: string;
 	params: string;
 	range: Range;
@@ -30,7 +29,7 @@ export type Script = {
 	relativePath: string;
 	meta: {
 		functions: Function[];
-		functionUses: FunctionUse[];
+		functionCalls: FunctionCall[];
 	};
 };
 
@@ -39,6 +38,9 @@ export class Parser {
 		return line.trim().startsWith("#");
 	}
 
+	/**
+	 * Gets comment lines above a certain line
+	 */
 	static getCommentsAbove(lines: string[], lineCount: number) {
 		const comments = [];
 
@@ -64,6 +66,9 @@ export class Parser {
 		return comments;
 	}
 
+	/**
+	 * Gets function declarations in a script
+	 */
 	static parseFunctions(script: Script, source: string) {
 		const functions: Function[] = [];
 
@@ -114,10 +119,10 @@ export class Parser {
 	}
 
 	/**
-	 * Updates the uses information for every function in the registry
+	 * Gets function calls in a script
 	 */
-	static parseFunctionUses(script: Script, source: string): FunctionUse[] {
-		const uses = [];
+	static parseFunctionCalls(script: Script, source: string): FunctionCall[] {
+		const calls = [];
 
 		const lines = source.split("\n");
 		const regex = /(?<!\bfunction\s+)\b(\w+)\(([^)]*)\)/g;
@@ -132,12 +137,15 @@ export class Parser {
 				// Calculate the range of the function usage
 				const usageStartPosition = match.index + match[0].indexOf(functionName);
 				const usageEndPosition = regex.lastIndex;
-				const range = new Range(new Position(lineNumber, usageStartPosition), new Position(lineNumber, usageEndPosition));
+				const range = new Range(
+					new Position(lineNumber, usageStartPosition),
+					new Position(lineNumber, usageEndPosition)
+				);
 
 				if (line.trim().startsWith("#")) continue; // ignore in comments
 				if (Parser.isPositionInString(line, range.start.character)) continue; // ignore in strings
 
-				uses.push({
+				calls.push({
 					name: functionName,
 					params: parametersString,
 					range: range,
@@ -145,9 +153,12 @@ export class Parser {
 			}
 		});
 
-		return uses;
+		return calls;
 	}
 
+	/**
+	 * Gets the index of the first character that is not a # or a whitespace
+	 */
 	static getFirstCharIndexInLine(line: string) {
 		let charIndex = 0;
 		while ((Parser.isWhitespace(line[charIndex]) || line[charIndex] === "#") && charIndex < line.length - 1) {
@@ -156,11 +167,17 @@ export class Parser {
 		return charIndex;
 	}
 
+	/**
+	 * Checks if a string is just whitespace
+	 */
 	static isWhitespace(char: string) {
 		if (typeof char !== "string") return false;
 		return char.trim() === "";
 	}
 
+	/**
+	 * Checks if a position is within a string
+	 */
 	static isPositionInString(line: string, character: number): boolean {
 		let insideString = false;
 		let isInEscapeSequence = false;
@@ -190,12 +207,12 @@ export class Parser {
 			relativePath: path.slice(workspacePath.length + 1).replace(/\\/g, "/"),
 			meta: {
 				functions: [],
-				functionUses: [],
+				functionCalls: [],
 			},
 		};
 
 		script.meta.functions = this.parseFunctions(script, source);
-		script.meta.functionUses = this.parseFunctionUses(script, source);
+		script.meta.functionCalls = this.parseFunctionCalls(script, source);
 
 		return script;
 	}

@@ -19,9 +19,8 @@ import {
 	languages,
 } from "vscode";
 import { Session } from "..";
-
 import * as snippets from "../../snippets.json";
-import { Parser } from "./parser";
+import { Parser } from "../../utilities/parser";
 
 export class ProviderHandler {
 	constructor(session: Session) {
@@ -59,7 +58,10 @@ export class ProviderHandler {
 							_wordBeforeChar >= 0
 								? document.getText(
 										document.getWordRangeAtPosition(
-											new Position(position.line, Math.max(position.character - typedText.length - 2, 0))
+											new Position(
+												position.line,
+												Math.max(position.character - typedText.length - 2, 0)
+											)
 										)
 								  )
 								: undefined;
@@ -77,7 +79,9 @@ export class ProviderHandler {
 
 									const displayName = `${script.name}.sk`;
 									const pathDisplay =
-										displayName === script.relativePath ? displayName : `${displayName} (${script.relativePath})`;
+										displayName === script.relativePath
+											? displayName
+											: `${displayName} (${script.relativePath})`;
 									item.detail = `in ${pathDisplay}`;
 
 									const markdown = new MarkdownString();
@@ -161,19 +165,19 @@ export class ProviderHandler {
 						const script = registryHandler.getScript(document.uri.path);
 						if (!script) return;
 
-						const use = script.meta.functionUses.find((v) => {
+						const call = script.meta.functionCalls.find((v) => {
 							return position.isAfter(v.range.start) && position.isBefore(v.range.end); // if position is within the range
 						});
-						if (!use) return;
-						const func = registryHandler.getFunction(use.name);
+						if (!call) return;
+						const func = registryHandler.getFunction(call.name);
 						if (!func) return;
 
-						const charIndex = position.character - use.range.start.character;
+						const charIndex = position.character - call.range.start.character;
 
-						const paramCharIndex = charIndex - use.name.length - 1;
+						const paramCharIndex = charIndex - call.name.length - 1;
 						if (paramCharIndex < 0) return;
 
-						const paramsTextToCursor = paramCharIndex === 0 ? "" : use.params.substring(0, paramCharIndex);
+						const paramsTextToCursor = paramCharIndex === 0 ? "" : call.params.substring(0, paramCharIndex);
 						const paramIndex = paramsTextToCursor.split(",").length - 1;
 
 						const paramData = func.params[paramIndex];
@@ -208,26 +212,27 @@ export class ProviderHandler {
 					const hints: InlayHint[] = [];
 					const text = document.getText(range);
 
-					script.meta.functionUses.forEach((use) => {
-						const func = registryHandler.getFunction(use.name);
+					script.meta.functionCalls.forEach((call) => {
+						const func = registryHandler.getFunction(call.name);
 						if (!func) return;
 
-						// check if use is within the range to compute for
-						if (!use.range.start.isAfterOrEqual(range.start) || !use.range.end.isBeforeOrEqual(range.end)) return;
+						// check if call is within the range to compute for
+						if (!call.range.start.isAfterOrEqual(range.start) || !call.range.end.isBeforeOrEqual(range.end))
+							return;
 
-						let charIndex = use.name.length + 1;
+						let charIndex = call.name.length + 1;
 						let paramIndex = 0;
 
-						for (const paramText of use.params.split(",")) {
+						for (const paramText of call.params.split(",")) {
 							if (paramText.trim() === "") continue;
 
-							while (use.params[charIndex - use.name.length - 1] === " ") {
+							while (call.params[charIndex - call.name.length - 1] === " ") {
 								charIndex += 1;
 							}
 
 							const paramData = func.params[paramIndex];
 							if (paramData) {
-								const pos = new Position(use.range.start.line, charIndex + use.range.start.character);
+								const pos = new Position(call.range.start.line, charIndex + call.range.start.character);
 								hints.push(new InlayHint(pos, `${paramData.name}: `, InlayHintKind.Parameter));
 							}
 
